@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ledger · Adam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Schibsted+Grotesk:wght@400;500;700&family=Spline+Sans+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3F4EF;
+    --card:#FFFFFF;
+    --ink:#20241F;
+    --muted:#6F766B;
+    --green:#1E4034;
+    --green-2:#2E6B52;
+    --green-soft:#E4EDE6;
+    --red:#B33A2F;
+    --red-soft:#F6E5E2;
+    --gold:#A9853B;
+    --line:#DDE0D6;
+    --radius:14px;
+    --mono:'Spline Sans Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--paper);color:var(--ink);font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:16px}
+  body{padding-bottom:84px;max-width:560px;margin:0 auto}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
+
+  /* ---------- header ---------- */
+  header{padding:18px 18px 6px;display:flex;align-items:baseline;justify-content:space-between}
+  header h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:30px;letter-spacing:.01em}
+  header h1 em{font-style:italic;color:var(--green-2)}
+  .hdr-sub{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .gear{background:none;border:1px solid var(--line);border-radius:50%;width:36px;height:36px;font-size:17px;color:var(--muted)}
+
+  /* ---------- shared ---------- */
+  main{padding:8px 14px 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  .card h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:21px;margin-bottom:12px}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .muted{color:var(--muted)}
+  .small{font-size:13px}
+  .pos{color:var(--green-2)} .neg{color:var(--red)}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .btn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:13px 18px;font-size:16px;font-weight:700;width:100%}
+  .btn:active{background:var(--green-2)}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 14px;font-size:14px;font-weight:500;width:auto}
+  .btn-danger{background:var(--red-soft);color:var(--red);border:none;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:700}
+  .badge{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+  .badge.excl{background:#EFEAD9;color:var(--gold)}
+  .badge.over{background:var(--red-soft);color:var(--red)}
+  .badge.under{background:var(--green-soft);color:var(--green-2)}
+  .badge.paid{background:var(--green-soft);color:var(--green-2)}
+
+  /* ---------- add spend form ---------- */
+  .amount-wrap{display:flex;align-items:baseline;gap:6px;border-bottom:2px solid var(--green);padding:4px 2px 8px;margin-bottom:14px}
+  .amount-wrap .pound{font-family:'Instrument Serif',serif;font-size:30px;color:var(--green-2)}
+  #inAmount{border:none;outline:none;background:none;font-family:var(--mono);font-size:34px;font-weight:700;width:100%}
+  #inAmount::placeholder{color:#C6CBC0}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .field input[type=text],.field input[type=date],.field input[type=number],.field select,.field textarea{
+    width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8;outline:none}
+  .field select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%236F766B' stroke-width='2' fill='none'/></svg>");background-repeat:no-repeat;background-position:right 12px center}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green-2)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .toggle-row{display:flex;align-items:center;gap:10px;margin:4px 0 14px;font-size:14px;color:var(--muted)}
+  .switch{position:relative;width:44px;height:25px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#D8DCD2;border-radius:999px;transition:.15s}
+  .slider:before{content:'';position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+  .switch input:checked + .slider{background:var(--gold)}
+  .switch input:checked + .slider:before{transform:translateX(19px)}
+
+  /* ---------- spend list ---------- */
+  .spend{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+  .spend:last-child{border-bottom:none}
+  .spend .cat-dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .spend .desc{flex:1;min-width:0}
+  .spend .desc .d1{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spend .desc .d2{font-size:12px;color:var(--muted)}
+  .spend .amt{font-family:var(--mono);font-weight:700;white-space:nowrap}
+  .spend .amt.excl{color:var(--gold)}
+  .spend-actions{display:none;gap:8px;margin-top:8px}
+  .spend.open{flex-wrap:wrap}
+  .spend.open .spend-actions{display:flex;width:100%}
+
+  /* ---------- week summary / signature strip ---------- */
+  .week-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .week-head .nav{background:none;border:1px solid var(--line);border-radius:8px;width:34px;height:34px;font-size:16px;color:var(--muted)}
+  .week-title{font-family:'Instrument Serif',serif;font-size:20px}
+  .remaining{text-align:center;margin:10px 0 4px}
+  .remaining .big{font-family:var(--mono);font-size:42px;font-weight:700;letter-spacing:-.01em}
+  .remaining .lbl{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .thermo{height:10px;border-radius:999px;background:var(--green-soft);overflow:hidden;margin:12px 0 4px}
+  .thermo .fill{height:100%;border-radius:999px;background:var(--green-2);transition:width .3s}
+  .thermo .fill.over{background:var(--red)}
+  .thermo-lbls{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:12px}
+  .daybars{display:flex;align-items:flex-end;gap:7px;height:74px;padding-top:8px;border-top:1px dashed var(--line)}
+  .daybar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+  .daybar .bar{width:100%;max-width:34px;background:var(--green-soft);border-radius:5px 5px 0 0;min-height:2px}
+  .daybar.today .bar{background:var(--green-2)}
+  .daybar .dl{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+  .daybar.today .dl{color:var(--green-2)}
+  .daybar .dv{font-family:var(--mono);font-size:9px;color:var(--muted)}
+
+  .day-block{margin-bottom:4px}
+  .day-block h3{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+    display:flex;justify-content:space-between;padding:10px 2px 2px;border-bottom:1px solid var(--line)}
+  .day-block h3 .num{color:var(--ink)}
+  .zero-day{font-size:13px;color:var(--muted);padding:8px 2px;font-style:italic}
+
+  /* ---------- history ---------- */
+  .hist-week{padding:13px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .hist-week:last-child{border-bottom:none}
+
+  /* ---------- worth ---------- */
+  .worth-total{text-align:center;padding:6px 0 14px}
+  .worth-total .big{font-family:var(--mono);font-size:38px;font-weight:700}
+  .acct{display:flex;align-items:center;gap:8px;padding:11px 2px;border-bottom:1px solid var(--line)}
+  .acct:last-child{border-bottom:none}
+  .acct .nm{flex:1;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .acct input.bal{width:118px;text-align:right;font-family:var(--mono);font-weight:700;border:1px solid transparent;border-radius:8px;padding:6px 8px;background:none}
+  .acct input.bal:focus{border-color:var(--green-2);background:#FBFBF8;outline:none}
+  .acct .del{background:none;border:none;color:var(--muted);font-size:15px;padding:4px}
+
+  /* ---------- debts ---------- */
+  .debt{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+  .debt:last-child{border-bottom:none}
+  .debt .nm{flex:1;min-width:0}
+  .debt.paid .nm,.debt.paid .amt{text-decoration:line-through;color:var(--muted)}
+  .debt .amt{font-family:var(--mono);font-weight:700}
+  .debt .pay{border:1px solid var(--line);background:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--muted)}
+  .debt.paid .pay{background:var(--green-soft);color:var(--green-2);border-color:transparent}
+
+  /* ---------- tabs ---------- */
+  nav{position:fixed;bottom:0;left:0;right:0;background:var(--green);display:flex;max-width:560px;margin:0 auto;
+    border-radius:18px 18px 0 0;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  nav button{flex:1;background:none;border:none;color:#A9C4B4;font-size:11px;font-weight:700;letter-spacing:.04em;
+    padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px}
+  nav button .ic{font-size:18px;line-height:1}
+  nav button.active{color:#fff;background:rgba(255,255,255,.12)}
+
+  /* ---------- modal ---------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(30,40,35,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--paper);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px 30px}
+  .modal h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:23px;margin-bottom:14px}
+  .cat-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:999px;padding:6px 8px 6px 12px;margin:0 6px 8px 0;font-size:14px}
+  .cat-chip button{background:none;border:none;color:var(--muted);font-size:13px}
+  .settings-block{margin-bottom:20px}
+  .settings-block h3{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+  textarea.note{resize:vertical;min-height:64px}
+  .hidden{display:none!important}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Ledger<em>.</em></h1>
+    <div class="hdr-sub">Adam · London · GBP</div>
+  </div>
+  <button class="gear" id="btnSettings" aria-label="Settings">⚙</button>
+</header>
+
+<main>
+  <!-- ============ TODAY ============ -->
+  <section id="tab-today">
+    <div class="card">
+      <h2 id="addTitle">Add a spend</h2>
+      <div class="amount-wrap">
+        <span class="pound">£</span>
+        <input id="inAmount" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="inCat">Category</label>
+        <select id="inCat"></select>
+      </div>
+      <div class="field">
+        <label for="inDesc">What was it?</label>
+        <input id="inDesc" type="text" placeholder="e.g. Pret, Sainsbury's, Uber…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="inDate">Date</label>
+        <input id="inDate" type="date">
+      </div>
+      <div class="toggle-row">
+        <label class="switch"><input type="checkbox" id="inExcl"><span class="slider"></span></label>
+        <span>Exclude from weekly budget</span>
+      </div>
+      <button class="btn" id="btnSave">Save spend</button>
+      <button class="btn-ghost hidden" id="btnCancelEdit" style="width:100%;margin-top:8px">Cancel edit</button>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <h2 style="margin:0">Today</h2>
+        <span class="num" id="todayTotal" style="font-weight:700"></span>
+      </div>
+      <div id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- ============ WEEK ============ -->
+  <section id="tab-week" class="hidden">
+    <div class="card">
+      <div class="week-head">
+        <button class="nav" id="wkPrev" aria-label="Previous week">‹</button>
+        <div class="week-title" id="wkTitle"></div>
+        <button class="nav" id="wkNext" aria-label="Next week">›</button>
+      </div>
+      <div class="remaining">
+        <div class="big" id="wkRemaining"></div>
+        <div class="lbl" id="wkRemainingLbl"></div>
+      </div>
+      <div class="thermo"><div class="fill" id="wkFill"></div></div>
+      <div class="thermo-lbls"><span class="num" id="wkSpent"></span><span class="num" id="wkBudget"></span></div>
+      <div class="daybars" id="wkBars"></div>
+      <div class="small muted" id="wkExcl" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Day by day</h2>
+      <div id="wkDays"></div>
+    </div>
+
+    <div class="card">
+      <h2>Week note</h2>
+      <div class="field" style="margin:0">
+        <textarea id="wkNote" class="note" placeholder="How did the week go? (saves automatically)"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section id="tab-history" class="hidden">
+    <div class="card">
+      <h2>Weeks</h2>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- ============ WORTH ============ -->
+  <section id="tab-worth" class="hidden">
+    <div class="card">
+      <div class="worth-total">
+        <div class="big" id="worthTotal"></div>
+        <div class="hdr-sub">Net worth · <span id="worthUpdated"></span></div>
+      </div>
+      <div id="acctList"></div>
+      <div style="margin-top:14px" class="two-col">
+        <input id="newAcctName" type="text" placeholder="Account name" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+        <input id="newAcctBal" type="text" inputmode="decimal" placeholder="Balance £" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+      </div>
+      <button class="btn-ghost" id="btnAddAcct" style="width:100%;margin-top:8px">+ Add account</button>
+      <p class="small muted" style="margin-top:10px">Tap a balance to edit it. Use a minus sign for money owed (e.g. a credit card).</p>
+    </div>
+  </section>
+
+  <!-- ============ DEBTS ============ -->
+  <section id="tab-debts" class="hidden">
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">I owe</h2>
+        <span class="num neg" id="oweTotal" style="font-weight:700"></span>
+      </div>
+      <div id="oweList" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">Owed to me</h2>
+        <span class="num pos" id="owedTotal" style="font-weight:700"></span>
+      </div>
+      <div id="owedList" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <h2>Add a debt</h2>
+      <div class="field">
+        <label for="dbName">Description</label>
+        <input id="dbName" type="text" placeholder="e.g. Karolina — flight refund">
+      </div>
+      <div class="two-col">
+        <div class="field">
+          <label for="dbAmt">Amount £</label>
+          <input id="dbAmt" type="text" inputmode="decimal" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label for="dbDir">Direction</label>
+          <select id="dbDir">
+            <option value="iowe">I owe</option>
+            <option value="owedme">Owed to me</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" id="btnAddDebt">Add debt</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="today" class="active"><span class="ic">✚</span>Today</button>
+  <button data-tab="week"><span class="ic">▦</span>Week</button>
+  <button data-tab="history"><span class="ic">≣</span>History</button>
+  <button data-tab="worth"><span class="ic">◆</span>Worth</button>
+  <button data-tab="debts"><span class="ic">⇄</span>Debts</button>
+</nav>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal-bg" id="settingsBg">
+  <div class="modal">
+    <div class="row" style="margin-bottom:6px">
+      <h2 style="margin:0">Settings</h2>
+      <button class="btn-ghost" id="btnCloseSettings">Done</button>
+    </div>
+
+    <div class="settings-block">
+      <h3>Weekly budget (£)</h3>
+      <input id="setBudget" type="text" inputmode="decimal" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+    </div>
+
+    <div class="settings-block">
+      <h3>Categories</h3>
+      <div id="catChips"></div>
+      <div class="two-col" style="margin-top:6px">
+        <input id="newCat" type="text" placeholder="New category" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+        <button class="btn-ghost" id="btnAddCat">+ Add</button>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <h3>Backup</h3>
+      <div class="btn-row">
+        <button class="btn-ghost" id="btnExportJson">Export backup (JSON)</button>
+        <button class="btn-ghost" id="btnExportCsv">Export spends (CSV)</button>
+        <button class="btn-ghost" id="btnImport">Import backup</button>
+        <input type="file" id="importFile" accept=".json" class="hidden">
+      </div>
+      <p class="small muted" style="margin-top:8px">Data lives only in this browser (localStorage). Export a backup now and then — clearing the browser wipes it.</p>
+    </div>
+
+    <div class="settings-block">
+      <h3>Danger zone</h3>
+      <button class="btn-danger" id="btnWipe">Erase all data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var KEY='adamLedger_v1';
+
+  /* ---------------- state ---------------- */
+  function defaultState(){
+    return {
+      settings:{
+        budget:250,
+        categories:['Groceries','Eating out','Coffee & snacks','Drinks & bars','Transport','Household','Health','Karolina & shared','Subscriptions','Other']
+      },
+      spends:[],   // {id,date:'YYYY-MM-DD',cat,desc,amount,excluded}
+      accounts:[   // seeded from the June sheet — edit freely
+        {id:uid(),name:'First Direct current account',balance:2141.93},
+        {id:uid(),name:'Plum cash ISA',balance:4000},
+        {id:uid(),name:'Secure Trust Bank ISA (4.17%)',balance:10000},
+        {id:uid(),name:'Trading 212 ISA (3.86%)',balance:2233.11},
+        {id:uid(),name:'Chip ISA (4.59%)',balance:0.02},
+        {id:uid(),name:'Revolut (was €863)',balance:750.81},
+        {id:uid(),name:'Revolut savings (was €1,032.65)',balance:898.40},
+        {id:uid(),name:'HSBC credit card',balance:-157.22}
+      ],
+      worthUpdated:todayISO(),
+      debts:[      // {id,name,amount,direction:'iowe'|'owedme',paid}
+        {id:uid(),name:'Karolina — carried forward from June sheet (check figure)',amount:3109.61,direction:'iowe',paid:false}
+      ],
+      weekNotes:{} // {mondayISO:'note'}
+    };
+  }
+  function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+  function load(){
+    try{
+      var raw=localStorage.getItem(KEY);
+      if(raw){var s=JSON.parse(raw); if(s&&s.settings) return s;}
+    }catch(e){}
+    var st=defaultState(); save(st); return st;
+  }
+  function save(s){localStorage.setItem(KEY,JSON.stringify(s||S));}
+  var S=load();
+
+  /* ---------------- dates ---------------- */
+  function todayISO(){return toISO(new Date());}
+  function toISO(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function fromISO(iso){var p=iso.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function mondayOf(iso){
+    var d=fromISO(iso);
+    var off=(d.getDay()+6)%7; // Mon=0 … Sun=6
+    d.setDate(d.getDate()-off);
+    return toISO(d);
+  }
+  function addDays(iso,n){var d=fromISO(iso);d.setDate(d.getDate()+n);return toISO(d);}
+  var DAYNAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  function fmtDate(iso){
+    var d=fromISO(iso);
+    return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  }
+  function fmtDateFull(iso){
+    var d=fromISO(iso);
+    return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+  function weekLabel(mon){return 'W/C '+fmtDate(mon)+' '+fromISO(mon).getFullYear();}
+
+  /* ---------------- money ---------------- */
+  function gbp(n){
+    var neg=n<0; n=Math.abs(n);
+    return (neg?'−£':'£')+n.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function parseAmt(v){
+    v=String(v||'').replace(/[£,\s]/g,'').replace(',','.');
+    var n=parseFloat(v);
+    return isFinite(n)?Math.round(n*100)/100:NaN;
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* ---------------- category colours ---------------- */
+  var DOTS=['#2E6B52','#B33A2F','#A9853B','#3D6B8F','#7A5AA0','#C06B2E','#4E7D3A','#8F3D6B','#5A7C7A','#6F766B'];
+  function catColour(cat){
+    var i=S.settings.categories.indexOf(cat);
+    if(i<0)i=9;
+    return DOTS[i%DOTS.length];
+  }
+
+  /* ---------------- spend helpers ---------------- */
+  function spendsOn(iso){return S.spends.filter(function(s){return s.date===iso;});}
+  function spendsInWeek(mon){
+    var end=addDays(mon,6);
+    return S.spends.filter(function(s){return s.date>=mon&&s.date<=end;});
+  }
+  function sum(list,inclExcluded){
+    return list.reduce(function(t,s){return (inclExcluded||!s.excluded)?t+s.amount:t;},0);
+  }
+
+  /* ---------------- tabs ---------------- */
+  var tabs=['today','week','history','worth','debts'];
+  document.querySelectorAll('nav button').forEach(function(b){
+    b.addEventListener('click',function(){
+      tabs.forEach(function(t){
+        document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab);
+      });
+      document.querySelectorAll('nav button').forEach(function(x){x.classList.toggle('active',x===b);});
+      renderAll();
+      window.scrollTo(0,0);
+    });
+  });
+
+  /* ---------------- add / edit spend ---------------- */
+  var editingId=null;
+  var elAmount=document.getElementById('inAmount'),
+      elCat=document.getElementById('inCat'),
+      elDesc=document.getElementById('inDesc'),
+      elDate=document.getElementById('inDate'),
+      elExcl=document.getElementById('inExcl');
+
+  function fillCatSelect(){
+    elCat.innerHTML=S.settings.categories.map(function(c){return '<option>'+esc(c)+'</option>';}).join('');
+  }
+  function resetForm(){
+    editingId=null;
+    elAmount.value='';elDesc.value='';elExcl.checked=false;
+    elDate.value=todayISO();
+    elCat.selectedIndex=0;
+    document.getElementById('addTitle').textContent='Add a spend';
+    document.getElementById('btnSave').textContent='Save spend';
+    document.getElementById('btnCancelEdit').classList.add('hidden');
+  }
+  document.getElementById('btnSave').addEventListener('click',function(){
+    var amt=parseAmt(elAmount.value);
+    if(!(amt>0)){elAmount.focus();elAmount.placeholder='Enter an amount';return;}
+    var rec={
+      date:elDate.value||todayISO(),
+      cat:elCat.value||'Other',
+      desc:elDesc.value.trim()||elCat.value,
+      amount:amt,
+      excluded:elExcl.checked
+    };
+    if(editingId){
+      var s=S.spends.find(function(x){return x.id===editingId;});
+      if(s){s.date=rec.date;s.cat=rec.cat;s.desc=rec.desc;s.amount=rec.amount;s.excluded=rec.excluded;}
+    }else{
+      rec.id=uid();
+      S.spends.push(rec);
+    }
+    save();resetForm();renderAll();
+  });
+  document.getElementById('btnCancelEdit').addEventListener('click',function(){resetForm();});
+
+  function startEdit(id){
+    var s=S.spends.find(function(x){return x.id===id;});
+    if(!s)return;
+    editingId=id;
+    elAmount.value=s.amount.toFixed(2);
+    if(S.settings.categories.indexOf(s.cat)<0){S.settings.categories.push(s.cat);fillCatSelect();}
+    elCat.value=s.cat;
+    elDesc.value=s.desc;
+    elDate.value=s.date;
+    elExcl.checked=!!s.excluded;
+    document.getElementById('addTitle').textContent='Edit spend';
+    document.getElementById('btnSave').textContent='Save changes';
+    document.getElementById('btnCancelEdit').classList.remove('hidden');
+    // jump to Today tab where the form lives
+    document.querySelector('nav button[data-tab=today]').click();
+    elAmount.focus();
+  }
+  function deleteSpend(id){
+    S.spends=S.spends.filter(function(x){return x.id!==id;});
+    save();renderAll();
+  }
+
+  function spendRow(s,showDate){
+    var sub=esc(s.cat)+(showDate?' · '+fmtDate(s.date):'');
+    return '<div class="spend" data-id="'+s.id+'">'+
+      '<span class="cat-dot" style="background:'+catColour(s.cat)+'"></span>'+
+      '<span class="desc"><span class="d1">'+esc(s.desc)+'</span><span class="d2">'+sub+
+        (s.excluded?' <span class="badge excl">excl</span>':'')+'</span></span>'+
+      '<span class="amt'+(s.excluded?' excl':'')+'">'+gbp(s.amount)+'</span>'+
+      '<div class="spend-actions">'+
+        '<button class="btn-ghost" data-act="edit">Edit</button>'+
+        '<button class="btn-danger" data-act="del">Delete</button>'+
+      '</div></div>';
+  }
+  // one delegated listener for every spend list
+  document.body.addEventListener('click',function(ev){
+    var actBtn=ev.target.closest('[data-act]');
+    var row=ev.target.closest('.spend');
+    if(actBtn&&row){
+      if(actBtn.dataset.act==='edit')startEdit(row.dataset.id);
+      else if(confirm('Delete this spend?'))deleteSpend(row.dataset.id);
+      return;
+    }
+    if(row){
+      var wasOpen=row.classList.contains('open');
+      document.querySelectorAll('.spend.open').forEach(function(r){r.classList.remove('open');});
+      if(!wasOpen)row.classList.add('open');
+    }
+  });
+
+  /* ---------------- TODAY render ---------------- */
+  function renderToday(){
+    var list=spendsOn(todayISO()).slice().reverse();
+    document.getElementById('todayTotal').textContent=gbp(sum(list,true));
+    document.getElementById('todayList').innerHTML=
+      list.length?list.map(function(s){return spendRow(s,false);}).join('')
+                 :'<div class="zero-day">Nothing yet — a ZERO day so far.</div>';
+  }
+
+  /* ---------------- WEEK render ---------------- */
+  var viewMonday=mondayOf(todayISO());
+  document.getElementById('wkPrev').addEventListener('click',function(){viewMonday=addDays(viewMonday,-7);renderWeek();});
+  document.getElementById('wkNext').addEventListener('click',function(){viewMonday=addDays(viewMonday,7);renderWeek();});
+
+  var noteTimer=null;
+  document.getElementById('wkNote').addEventListener('input',function(){
+    var v=this.value;
+    clearTimeout(noteTimer);
+    noteTimer=setTimeout(function(){
+      if(v.trim())S.weekNotes[viewMonday]=v; else delete S.weekNotes[viewMonday];
+      save();
+    },400);
+  });
+
+  function renderWeek(){
+    var wk=spendsInWeek(viewMonday);
+    var counted=sum(wk,false), excl=sum(wk.filter(function(s){return s.excluded;}),true);
+    var budget=S.settings.budget, remaining=budget-counted;
+
+    var isThisWeek=viewMonday===mondayOf(todayISO());
+    document.getElementById('wkTitle').textContent=weekLabel(viewMonday)+(isThisWeek?' · this week':'');
+    var remEl=document.getElementById('wkRemaining');
+    remEl.textContent=gbp(Math.abs(remaining));
+    remEl.className='big '+(remaining<0?'neg':'pos');
+    document.getElementById('wkRemainingLbl').textContent=remaining<0?'over budget':'left this week';
+
+    var pct=budget>0?Math.min(100,counted/budget*100):0;
+    var fill=document.getElementById('wkFill');
+    fill.style.width=pct+'%';
+    fill.classList.toggle('over',counted>budget);
+    document.getElementById('wkSpent').textContent='Spent '+gbp(counted);
+    document.getElementById('wkBudget').textContent='Budget '+gbp(budget);
+
+    // signature Mon–Sun bars
+    var dayTotals=[],max=0;
+    for(var i=0;i<7;i++){
+      var t=sum(spendsOn(addDays(viewMonday,i)),false);
+      dayTotals.push(t); if(t>max)max=t;
+    }
+    var scale=Math.max(max,budget/7*1.4,1);
+    var tIso=todayISO();
+    document.getElementById('wkBars').innerHTML=dayTotals.map(function(t,i){
+      var h=Math.max(2,Math.round(t/scale*52));
+      var iso=addDays(viewMonday,i);
+      return '<div class="daybar'+(iso===tIso?' today':'')+'">'+
+        '<span class="dv">'+(t>0?Math.round(t):'')+'</span>'+
+        '<span class="bar" style="height:'+h+'px"></span>'+
+        '<span class="dl">'+DAYNAMES[i][0]+'</span></div>';
+    }).join('');
+
+    document.getElementById('wkExcl').textContent=
+      excl>0?'Excluded from budget this week: '+gbp(excl):'';
+
+    // day-by-day
+    var html='';
+    for(var d=0;d<7;d++){
+      var iso2=addDays(viewMonday,d);
+      var items=spendsOn(iso2);
+      html+='<div class="day-block"><h3><span>'+DAYNAMES[d]+' '+fmtDate(iso2)+'</span>'+
+            '<span class="num">'+gbp(sum(items,false))+'</span></h3>'+
+            (items.length?items.map(function(s){return spendRow(s,false);}).join('')
+                         :'<div class="zero-day">ZERO</div>')+'</div>';
+    }
+    document.getElementById('wkDays').innerHTML=html;
+    document.getElementById('wkNote').value=S.weekNotes[viewMonday]||'';
+  }
+
+  /* ---------------- HISTORY render ---------------- */
+  function renderHistory(){
+    var byWeek={};
+    S.spends.forEach(function(s){
+      var m=mondayOf(s.date);
+      (byWeek[m]=byWeek[m]||[]).push(s);
+    });
+    var mons=Object.keys(byWeek).sort().reverse();
+    var budget=S.settings.budget;
+    document.getElementById('histList').innerHTML=
+      mons.length?mons.map(function(m){
+        var t=sum(byWeek[m],false), diff=budget-t;
+        return '<div class="hist-week" data-mon="'+m+'">'+
+          '<div><div style="font-weight:500">'+weekLabel(m)+'</div>'+
+          '<div class="small muted">'+byWeek[m].length+' spends'+
+          (S.weekNotes[m]?' · “'+esc(S.weekNotes[m]).slice(0,42)+'”':'')+'</div></div>'+
+          '<div style="text-align:right"><div class="num" style="font-weight:700">'+gbp(t)+'</div>'+
+          '<span class="badge '+(diff<0?'over':'under')+'">'+(diff<0?gbp(-diff)+' over':gbp(diff)+' under')+'</span></div>'+
+          '</div>';
+      }).join('')
+      :'<div class="zero-day">No weeks recorded yet.</div>';
+    document.querySelectorAll('.hist-week').forEach(function(el){
+      el.addEventListener('click',function(){
+        viewMonday=el.dataset.mon;
+        document.querySelector('nav button[data-tab=week]').click();
+      });
+    });
+  }
+
+  /* ---------------- WORTH render ---------------- */
+  function renderWorth(){
+    var total=S.accounts.reduce(function(t,a){return t+a.balance;},0);
+    document.getElementById('worthTotal').textContent=gbp(total);
+    document.getElementById('worthUpdated').textContent='updated '+fmtDateFull(S.worthUpdated||todayISO());
+    document.getElementById('acctList').innerHTML=S.accounts.map(function(a){
+      return '<div class="acct" data-id="'+a.id+'">'+
+        '<span class="nm">'+esc(a.name)+'</span>'+
+        '<input class="bal num'+(a.balance<0?' neg':'')+'" inputmode="decimal" value="'+a.balance.toFixed(2)+'">'+
+        '<button class="del" aria-label="Delete account">✕</button></div>';
+    }).join('');
+    document.querySelectorAll('.acct').forEach(function(row){
+      var a=S.accounts.find(function(x){return x.id===row.dataset.id;});
+      row.querySelector('.bal').addEventListener('change',function(){
+        var n=parseAmt(this.value);
+        if(isFinite(n)){a.balance=n;S.worthUpdated=todayISO();save();}
+        renderWorth();
+      });
+      row.querySelector('.del').addEventListener('click',function(){
+        if(confirm('Remove "'+a.name+'"?')){
+          S.accounts=S.accounts.filter(function(x){return x.id!==a.id;});
+          S.worthUpdated=todayISO();save();renderWorth();
+        }
+      });
+    });
+  }
+  document.getElementById('btnAddAcct').addEventListener('click',function(){
+    var nm=document.getElementById('newAcctName').value.trim();
+    var bal=parseAmt(document.getElementById('newAcctBal').value);
+    if(!nm){document.getElementById('newAcctName').focus();return;}
+    if(!isFinite(bal))bal=0;
+    S.accounts.push({id:uid(),name:nm,balance:bal});
+    S.worthUpdated=todayISO();save();
+    document.getElementById('newAcctName').value='';document.getElementById('newAcctBal').value='';
+    renderWorth();
+  });
+
+  /* ---------------- DEBTS render ---------------- */
+  function debtRow(d){
+    return '<div class="debt'+(d.paid?' paid':'')+'" data-id="'+d.id+'">'+
+      '<span class="nm">'+esc(d.name)+'</span>'+
+      '<span class="amt">'+gbp(d.amount)+'</span>'+
+      '<button class="pay">'+(d.paid?'Paid ✓':'Mark paid')+'</button>'+
+      '<button class="del" style="background:none;border:none;color:var(--muted)">✕</button></div>';
+  }
+  function renderDebts(){
+    var owe=S.debts.filter(function(d){return d.direction==='iowe';});
+    var owed=S.debts.filter(function(d){return d.direction==='owedme';});
+    function unpaid(list){return list.reduce(function(t,d){return d.paid?t:t+d.amount;},0);}
+    document.getElementById('oweTotal').textContent=gbp(unpaid(owe));
+    document.getElementById('owedTotal').textContent=gbp(unpaid(owed));
+    document.getElementById('oweList').innerHTML=owe.length?owe.map(debtRow).join(''):'<div class="zero-day">Nothing owed. Lovely.</div>';
+    document.getElementById('owedList').innerHTML=owed.length?owed.map(debtRow).join(''):'<div class="zero-day">No one owes you anything.</div>';
+    document.querySelectorAll('.debt').forEach(function(row){
+      var d=S.debts.find(function(x){return x.id===row.dataset.id;});
+      row.querySelector('.pay').addEventListener('click',function(){d.paid=!d.paid;save();renderDebts();});
+      row.querySelector('.del').addEventListener('click',function(){
+        if(confirm('Delete "'+d.name+'"?')){S.debts=S.debts.filter(function(x){return x.id!==d.id;});save();renderDebts();}
+      });
+    });
+  }
+  document.getElementById('btnAddDebt').addEventListener('click',function(){
+    var nm=document.getElementById('dbName').value.trim();
+    var amt=parseAmt(document.getElementById('dbAmt').value);
+    if(!nm||!(amt>0)){return;}
+    S.debts.push({id:uid(),name:nm,amount:amt,direction:document.getElementById('dbDir').value,paid:false});
+    save();
+    document.getElementById('dbName').value='';document.getElementById('dbAmt').value='';
+    renderDebts();
+  });
+
+  /* ---------------- SETTINGS ---------------- */
+  var settingsBg=document.getElementById('settingsBg');
+  document.getElementById('btnSettings').addEventListener('click',function(){
+    document.getElementById('setBudget').value=S.settings.budget;
+    renderCatChips();
+    settingsBg.classList.add('show');
+  });
+  document.getElementById('btnCloseSettings').addEventListener('click',closeSettings);
+  settingsBg.addEventListener('click',function(e){if(e.target===settingsBg)closeSettings();});
+  function closeSettings(){
+    var b=parseAmt(document.getElementById('setBudget').value);
+    if(b>0)S.settings.budget=b;
+    save();settingsBg.classList.remove('show');renderAll();
+  }
+  function renderCatChips(){
+    document.getElementById('catChips').innerHTML=S.settings.categories.map(function(c,i){
+      return '<span class="cat-chip"><span class="cat-dot" style="width:8px;height:8px;border-radius:50%;background:'+catColour(c)+'"></span>'+
+        esc(c)+'<button data-i="'+i+'" aria-label="Remove">✕</button></span>';
+    }).join('');
+    document.querySelectorAll('#catChips button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var c=S.settings.categories[+b.dataset.i];
+        if(S.settings.categories.length<=1){alert('Keep at least one category.');return;}
+        if(confirm('Remove category "'+c+'"? Existing spends keep their label.')){
+          S.settings.categories.splice(+b.dataset.i,1);
+          save();fillCatSelect();renderCatChips();
+        }
+      });
+    });
+  }
+  document.getElementById('btnAddCat').addEventListener('click',function(){
+    var v=document.getElementById('newCat').value.trim();
+    if(!v)return;
+    if(S.settings.categories.indexOf(v)<0)S.settings.categories.push(v);
+    document.getElementById('newCat').value='';
+    save();fillCatSelect();renderCatChips();
+  });
+
+  /* ---------------- backup ---------------- */
+  function download(name,text,type){
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:type}));
+    a.download=name;a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+  }
+  document.getElementById('btnExportJson').addEventListener('click',function(){
+    download('ledger-backup-'+todayISO()+'.json',JSON.stringify(S,null,2),'application/json');
+  });
+  document.getElementById('btnExportCsv').addEventListener('click',function(){
+    var rows=[['date','category','description','amount','excluded']].concat(
+      S.spends.slice().sort(function(a,b){return a.date<b.date?-1:1;}).map(function(s){
+        return [s.date,s.cat,'"'+String(s.desc).replace(/"/g,'""')+'"',s.amount.toFixed(2),s.excluded?'yes':'no'];
+      }));
+    download('ledger-spends-'+todayISO()+'.csv',rows.map(function(r){return r.join(',');}).join('\n'),'text/csv');
+  });
+  document.getElementById('btnImport').addEventListener('click',function(){document.getElementById('importFile').click();});
+  document.getElementById('importFile').addEventListener('change',function(){
+    var f=this.files[0]; if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var data=JSON.parse(rd.result);
+        if(!data.settings||!Array.isArray(data.spends))throw new Error('bad');
+        if(confirm('Replace ALL current data with this backup?')){
+          S=data;save();fillCatSelect();renderAll();closeSettings();
+        }
+      }catch(e){alert('That file isn\'t a valid Ledger backup.');}
+    };
+    rd.readAsText(f);
+    this.value='';
+  });
+  document.getElementById('btnWipe').addEventListener('click',function(){
+    if(confirm('Erase EVERYTHING — spends, accounts, debts, notes?')&&confirm('Last chance. Really erase all data?')){
+      S=defaultState();save();fillCatSelect();renderAll();closeSettings();
+    }
+  });
+
+  /* ---------------- boot ---------------- */
+  function renderAll(){renderToday();renderWeek();renderHistory();renderWorth();renderDebts();}
+  fillCatSelect();
+  resetForm();
+  renderAll();
+})();
+</script>
+</body>
+</html>
