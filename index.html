@@ -139,8 +139,8 @@
   /* ---------- tabs ---------- */
   nav{position:fixed;bottom:0;left:0;right:0;background:var(--green);display:flex;max-width:560px;margin:0 auto;
     border-radius:18px 18px 0 0;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
-  nav button{flex:1;background:none;border:none;color:#A9C4B4;font-size:11px;font-weight:700;letter-spacing:.04em;
-    padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px}
+  nav button{flex:1;background:none;border:none;color:#A9C4B4;font-size:10px;font-weight:700;letter-spacing:.02em;
+    padding:8px 1px;display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px}
   nav button .ic{font-size:18px;line-height:1}
   nav button.active{color:#fff;background:rgba(255,255,255,.12)}
 
@@ -264,6 +264,33 @@
     </div>
   </section>
 
+  <!-- ============ COMMITMENTS ============ -->
+  <section id="tab-commit" class="hidden">
+    <div class="card">
+      <div class="week-head">
+        <button class="nav" id="cmPrev" aria-label="Previous month">‹</button>
+        <div class="week-title" id="cmTitle"></div>
+        <button class="nav" id="cmNext" aria-label="Next month">›</button>
+      </div>
+      <div class="remaining">
+        <div class="big" id="cmToPay"></div>
+        <div class="lbl">still to pay this month</div>
+      </div>
+      <div class="thermo"><div class="fill" id="cmFill"></div></div>
+      <div class="thermo-lbls"><span class="num" id="cmPaid"></span><span class="num" id="cmTotal"></span></div>
+      <div id="cmList" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <h2>Add a commitment</h2>
+      <div class="two-col">
+        <input id="cmNewName" type="text" placeholder="Bill name" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+        <input id="cmNewAmt" type="text" inputmode="decimal" placeholder="Amount £" style="padding:10px;border:1px solid var(--line);border-radius:10px;background:#FBFBF8">
+      </div>
+      <button class="btn-ghost" id="btnAddCm" style="width:100%;margin-top:8px">+ Add commitment</button>
+      <p class="small muted" style="margin-top:10px">Tap an amount to edit it. The Paid ticks are per-month — flip to a new month and they start fresh.</p>
+    </div>
+  </section>
+
   <!-- ============ DEBTS ============ -->
   <section id="tab-debts" class="hidden">
     <div class="card">
@@ -308,6 +335,7 @@
   <button data-tab="today" class="active"><span class="ic">✚</span>Today</button>
   <button data-tab="week"><span class="ic">▦</span>Week</button>
   <button data-tab="history"><span class="ic">≣</span>History</button>
+  <button data-tab="commit"><span class="ic">▤</span>Bills</button>
   <button data-tab="worth"><span class="ic">◆</span>Worth</button>
   <button data-tab="debts"><span class="ic">⇄</span>Debts</button>
 </nav>
@@ -400,14 +428,46 @@
       debts:[      // {id,name,amount,direction:'iowe'|'owedme',paid}
         {id:uid(),name:'Karolina — carried forward from June sheet (check figure)',amount:3109.61,direction:'iowe',paid:false}
       ],
-      weekNotes:{} // {mondayISO:'note'}
+      weekNotes:{}, // {mondayISO:'note'}
+      commitments:seedCommitments(), // {id,name,amount}
+      commitPaid:{} // {'YYYY-MM':{commitmentId:true}}
     };
+  }
+  function seedCommitments(){
+    // copied as-is from the monthly Outgoing table in the June sheet
+    return [
+      {id:uid(),name:'Mortgage',amount:1150},
+      {id:uid(),name:'Service Charge',amount:240},
+      {id:uid(),name:'Hot water',amount:32.34},
+      {id:uid(),name:'Electricity',amount:31.26},
+      {id:uid(),name:'UK mobile',amount:42.59},
+      {id:uid(),name:'PT mobile',amount:20.49},
+      {id:uid(),name:'Vodafone Internet',amount:42.59},
+      {id:uid(),name:'Home insurance',amount:62},
+      {id:uid(),name:'Council tax',amount:230},
+      {id:uid(),name:'Water',amount:37},
+      {id:uid(),name:'Urang SC',amount:280},
+      {id:uid(),name:'RNID',amount:5},
+      {id:uid(),name:'Green',amount:5},
+      {id:uid(),name:'Gym',amount:82.34},
+      {id:uid(),name:'Credit card payment',amount:200},
+      {id:uid(),name:'Green',amount:5},
+      {id:uid(),name:'Rev Premium',amount:15}
+    ];
   }
   function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
   function load(){
     try{
       var raw=localStorage.getItem(KEY);
-      if(raw){var s=JSON.parse(raw); if(s&&s.settings) return s;}
+      if(raw){
+        var s=JSON.parse(raw);
+        if(s&&s.settings){
+          // migrations for data saved by older versions
+          if(!Array.isArray(s.commitments))s.commitments=seedCommitments();
+          if(!s.commitPaid)s.commitPaid={};
+          return s;
+        }
+      }
     }catch(e){}
     var st=defaultState(); save(st); return st;
   }
@@ -469,7 +529,7 @@
   }
 
   /* ---------------- tabs ---------------- */
-  var tabs=['today','week','history','worth','debts'];
+  var tabs=['today','week','history','commit','worth','debts'];
   document.querySelectorAll('nav button').forEach(function(b){
     b.addEventListener('click',function(){
       tabs.forEach(function(t){
@@ -731,7 +791,7 @@
     document.getElementById('owedTotal').textContent=gbp(unpaid(owed));
     document.getElementById('oweList').innerHTML=owe.length?owe.map(debtRow).join(''):'<div class="zero-day">Nothing owed. Lovely.</div>';
     document.getElementById('owedList').innerHTML=owed.length?owed.map(debtRow).join(''):'<div class="zero-day">No one owes you anything.</div>';
-    document.querySelectorAll('.debt').forEach(function(row){
+    document.querySelectorAll('#oweList .debt, #owedList .debt').forEach(function(row){
       var d=S.debts.find(function(x){return x.id===row.dataset.id;});
       row.querySelector('.pay').addEventListener('click',function(){d.paid=!d.paid;save();renderDebts();});
       row.querySelector('.del').addEventListener('click',function(){
@@ -747,6 +807,74 @@
     save();
     document.getElementById('dbName').value='';document.getElementById('dbAmt').value='';
     renderDebts();
+  });
+
+  /* ---------------- COMMITMENTS ---------------- */
+  var viewMonth=todayISO().slice(0,7); // 'YYYY-MM'
+  function shiftMonth(n){
+    var y=+viewMonth.slice(0,4), m=+viewMonth.slice(5,7)-1+n;
+    var d=new Date(y,m,1);
+    viewMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    renderCommit();
+  }
+  document.getElementById('cmPrev').addEventListener('click',function(){shiftMonth(-1);});
+  document.getElementById('cmNext').addEventListener('click',function(){shiftMonth(1);});
+  function monthLabel(ym){
+    return new Date(+ym.slice(0,4),+ym.slice(5,7)-1,1)
+      .toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  }
+  function isPaid(id){var m=S.commitPaid[viewMonth];return !!(m&&m[id]);}
+  function renderCommit(){
+    var isThisMonth=viewMonth===todayISO().slice(0,7);
+    document.getElementById('cmTitle').textContent=monthLabel(viewMonth)+(isThisMonth?' · this month':'');
+    var total=0,paid=0;
+    S.commitments.forEach(function(c){total+=c.amount;if(isPaid(c.id))paid+=c.amount;});
+    var toPay=total-paid;
+    document.getElementById('cmToPay').textContent=gbp(toPay);
+    document.getElementById('cmToPay').className='big '+(toPay>0?'neg':'pos');
+    document.getElementById('cmPaid').textContent='Paid '+gbp(paid);
+    document.getElementById('cmTotal').textContent='Total '+gbp(total);
+    document.getElementById('cmFill').style.width=(total>0?paid/total*100:0)+'%';
+    document.getElementById('cmFill').classList.remove('over');
+    document.getElementById('cmList').innerHTML=S.commitments.map(function(c){
+      var p=isPaid(c.id);
+      return '<div class="debt'+(p?' paid':'')+'" data-id="'+c.id+'">'+
+        '<span class="nm">'+esc(c.name)+'</span>'+
+        '<input class="bal num" inputmode="decimal" value="'+c.amount.toFixed(2)+'" '+
+          'style="width:96px;text-align:right;font-family:var(--mono);font-weight:700;border:1px solid transparent;border-radius:8px;padding:6px 8px;background:none">'+
+        '<button class="pay">'+(p?'Paid ✓':'Mark paid')+'</button>'+
+        '<button class="del" style="background:none;border:none;color:var(--muted)">✕</button></div>';
+    }).join('');
+    document.querySelectorAll('#cmList .debt').forEach(function(row){
+      var c=S.commitments.find(function(x){return x.id===row.dataset.id;});
+      row.querySelector('.pay').addEventListener('click',function(){
+        if(!S.commitPaid[viewMonth])S.commitPaid[viewMonth]={};
+        S.commitPaid[viewMonth][c.id]=!S.commitPaid[viewMonth][c.id];
+        save();renderCommit();
+      });
+      row.querySelector('.bal').addEventListener('change',function(){
+        var n=parseAmt(this.value);
+        if(isFinite(n)&&n>=0){c.amount=n;save();}
+        renderCommit();
+      });
+      row.querySelector('.bal').addEventListener('click',function(e){e.stopPropagation();});
+      row.querySelector('.del').addEventListener('click',function(){
+        if(confirm('Remove "'+c.name+'" from your commitments?')){
+          S.commitments=S.commitments.filter(function(x){return x.id!==c.id;});
+          save();renderCommit();
+        }
+      });
+    });
+  }
+  document.getElementById('btnAddCm').addEventListener('click',function(){
+    var nm=document.getElementById('cmNewName').value.trim();
+    var amt=parseAmt(document.getElementById('cmNewAmt').value);
+    if(!nm){document.getElementById('cmNewName').focus();return;}
+    if(!(amt>=0))amt=0;
+    S.commitments.push({id:uid(),name:nm,amount:amt});
+    save();
+    document.getElementById('cmNewName').value='';document.getElementById('cmNewAmt').value='';
+    renderCommit();
   });
 
   /* ---------------- SETTINGS ---------------- */
@@ -827,7 +955,7 @@
   });
 
   /* ---------------- boot ---------------- */
-  function renderAll(){renderToday();renderWeek();renderHistory();renderWorth();renderDebts();}
+  function renderAll(){renderToday();renderWeek();renderHistory();renderCommit();renderWorth();renderDebts();}
   fillCatSelect();
   resetForm();
   renderAll();
