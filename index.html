@@ -364,7 +364,28 @@
         budget:250,
         categories:['Groceries','Eating out','Coffee & snacks','Drinks & bars','Transport','Household','Health','Karolina & shared','Subscriptions','Other']
       },
-      spends:[],   // {id,date:'YYYY-MM-DD',cat,desc,amount,excluded}
+      spends:[     // seeded 29 Jun – 2 Jul, converted from EUR at 0.8567 (2 Jul 2026)
+        {id:uid(),date:'2026-06-29',cat:'Groceries',desc:'Auchan (€23.58)',amount:20.20,excluded:false},
+        {id:uid(),date:'2026-06-29',cat:'Subscriptions',desc:'MEO (€20.98)',amount:17.97,excluded:false},
+        {id:uid(),date:'2026-06-29',cat:'Transport',desc:'Bolt (€21.01)',amount:18.00,excluded:false},
+        {id:uid(),date:'2026-06-29',cat:'Transport',desc:'Bird (€10.00)',amount:8.57,excluded:false},
+        {id:uid(),date:'2026-06-29',cat:'Transport',desc:'TfL (€18.06)',amount:15.47,excluded:false},
+        {id:uid(),date:'2026-06-29',cat:'Other',desc:'Spare change round-up (€3.37)',amount:2.89,excluded:false},
+        {id:uid(),date:'2026-06-30',cat:'Groceries',desc:'Meu Super (€6.33)',amount:5.42,excluded:false},
+        {id:uid(),date:'2026-06-30',cat:'Other',desc:'Haircut (€29.00)',amount:24.84,excluded:false},
+        {id:uid(),date:'2026-06-30',cat:'Coffee & snacks',desc:'Ice cream (€1.40)',amount:1.20,excluded:false},
+        {id:uid(),date:'2026-06-30',cat:'Eating out',desc:"Lucy's (€3.90)",amount:3.34,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Transport',desc:'Bolt (€18.11)',amount:15.51,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Drinks & bars',desc:'Atlético Club Portugal (€14.00)',amount:11.99,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Transport',desc:'Uber (€0.53)',amount:0.45,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Transport',desc:'Uber (€20.98)',amount:17.97,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Transport',desc:'Bolt (€6.37)',amount:5.46,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Coffee & snacks',desc:'Gleba (€4.00)',amount:3.43,excluded:false},
+        {id:uid(),date:'2026-07-01',cat:'Other',desc:'Spare change round-up (€4.00)',amount:3.43,excluded:false},
+        {id:uid(),date:'2026-07-02',cat:'Transport',desc:'Uber (€7.01)',amount:6.01,excluded:false},
+        {id:uid(),date:'2026-07-02',cat:'Drinks & bars',desc:'Wine shop (€27.75)',amount:23.77,excluded:false},
+        {id:uid(),date:'2026-07-02',cat:'Subscriptions',desc:'EasyPark (€2.99)',amount:2.56,excluded:false}
+      ],
       accounts:[   // seeded from the June sheet — edit freely
         {id:uid(),name:'First Direct current account',balance:2141.93},
         {id:uid(),name:'Plum cash ISA',balance:4000},
@@ -814,5 +835,3 @@
 </script>
 </body>
 </html>
-
-
